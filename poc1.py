@@ -43,7 +43,7 @@ def main() -> None:
         if not audio_session.setCategory_mode_options_error_(
             audio_session.category(),
             "AVAudioSessionModeVoiceChat",
-            audio_session.categoryOptions(),
+            original_options,
             None,
         ):
             print("オーディオセッションの復元に失敗")
