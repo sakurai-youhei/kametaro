@@ -16,13 +16,13 @@ def main() -> None:
         dialogs.alert("Recording...", "", "Finish", hide_cancel_button=True)
         recorder.stop()
 
-        result = speech.recognize(tf.name, language=language)
+        result = speech.recognize(tf.name, language)
 
     print("=== Details ===")
     print(result)
     print("=== Transcription ===")
     print(result[0][0])
-    speech.say(result[0][0], language=language)
+    speech.say(result[0][0], language)
 
     while speech.is_speaking():
         time.sleep(0.1)
