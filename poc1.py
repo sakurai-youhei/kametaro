@@ -7,6 +7,7 @@ import speech
 
 
 def main() -> None:
+    print("setting silent switch to false")
     sound.set_honors_silent_switch(False)
     speech.say("Hello from poc1.py!")
 
