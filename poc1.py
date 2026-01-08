@@ -39,6 +39,14 @@ def main() -> None:
         print(f"Options: {audio_session.categoryOptions()}")
 
         recorder.record()
+        print("\n=== オーディオモードを変更中 ===")
+        if not audio_session.setCategory_mode_options_error_(
+            audio_session.category(),
+            "AVAudioSessionModeVoiceChat",
+            audio_session.categoryOptions(),
+            None,
+        ):
+            print("オーディオセッションの復元に失敗")
 
         # AVAudioSessionCategory: AVAudioSessionCategoryPlayAndRecord
         # AVAudioSessionMode: AVAudioSessionModeDefault
