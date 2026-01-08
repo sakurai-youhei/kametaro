@@ -7,6 +7,7 @@ import speech
 
 
 def main() -> None:
+    sound.set_honors_silent_switch(False)
     speech.say("Hello from poc1.py!")
 
     language = "ja_JP"
