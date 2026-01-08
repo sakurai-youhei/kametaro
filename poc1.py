@@ -27,6 +27,11 @@ def main() -> None:
     language = "ja_JP"
     with tempfile.NamedTemporaryFile(suffix=".m4a") as tf:
         recorder = sound.Recorder(tf.name)
+        print("\n=== 録音開始前のオーディオセッション状態 ===")
+        print(f"Category: {audio_session.category()}")
+        print(f"Mode: {audio_session.mode()}")
+        print(f"Options: {audio_session.categoryOptions()}")
+
         recorder.record()
 
         # 録音中のオーディオセッション状態を確認
