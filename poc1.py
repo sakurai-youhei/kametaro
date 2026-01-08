@@ -1,10 +1,22 @@
 import tempfile
 import time
+from enum import IntFlag
 
 import dialogs
 import objc_util
 import sound
 import speech
+
+
+class AVAudioSessionCategoryOptions(IntFlag):
+    MixWithOthers = 0x1
+    DuckOthers = 0x2
+    AllowBluetooth = 0x4
+    DefaultToSpeaker = 0x8
+    InterruptSpokenAudioAndMixWithOthers = 0x11
+    AllowBluetoothA2DP = 0x20
+    AllowAirPlay = 0x40
+    OverrideMutedMicrophoneInterruption = 0x80
 
 
 def main() -> None:
@@ -43,7 +55,7 @@ def main() -> None:
         if not audio_session.setCategory_mode_options_error_(
             audio_session.category(),
             "AVAudioSessionModeVoiceChat",
-            original_options,
+            AVAudioSessionCategoryOptions.DefaultToSpeaker,
             None,
         ):
             print("オーディオモードとオプションの復元に失敗")
