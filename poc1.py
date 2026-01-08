@@ -45,7 +45,7 @@ def main() -> None:
         with tempfile.NamedTemporaryFile(suffix=".m4a") as tf:
             recorder = sound.Recorder(tf.name)
 
-            # The `.record()` method configure the audio session as follows:
+            # The `.record()` method changes AVAudioSession as follows:
             # [AVAudioSessionCategory]
             #   from AVAudioSessionCategoryPlayback
             #   to   AVAudioSessionCategoryPlayAndRecord
