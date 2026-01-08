@@ -1,11 +1,13 @@
 import tempfile
 import time
+from contextlib import contextmanager
+from ctypes import c_void_p
 from enum import IntFlag
 
 import dialogs
-import objc_util
 import sound
 import speech
+from objc_util import ObjCClass
 
 
 class AVAudioSessionCategoryOptions(IntFlag):
@@ -19,83 +21,70 @@ class AVAudioSessionCategoryOptions(IntFlag):
     OverrideMutedMicrophoneInterruption = 0x80
 
 
-def main() -> None:
-    # print("setting silent switch to false")
-    # sound.set_honors_silent_switch(False)
-    speech.say("Hello from poc1.py!")
-
-    AVAudioSession = objc_util.ObjCClass("AVAudioSession")
+@contextmanager
+def AVAudioSession():
+    AVAudioSession = ObjCClass("AVAudioSession")
     audio_session = AVAudioSession.sharedInstance()
 
-    # AVAudioSessionCategory: AVAudioSessionCategoryPlayback
-    # AVAudioSessionMode: AVAudioSessionModeDefault
-    # AVAudioSessionCategoryOptions: 1
-    print("=== 録音前のオーディオセッション状態 ===")
-    original_category = audio_session.category()
-    original_mode = audio_session.mode()
-    original_options = audio_session.categoryOptions()
-    print(f"Category: {original_category}")
-    print(f"Mode: {original_mode}")
-    print(f"Options: {original_options}")
+    original = (
+        audio_session.category(),
+        audio_session.mode(),
+        audio_session.categoryOptions(),
+    )
+
+    try:
+        yield audio_session
+    finally:
+        error = ObjCClass("NSError").alloc().init()
+        if not audio_session.setCategory_mode_options_error_(*original, error):
+            raise RuntimeError(
+                f"Failed to restore audio session: {c_void_p(id(error))}"
+            )
+
+
+def main() -> None:
 
     language = "ja_JP"
-    with tempfile.NamedTemporaryFile(suffix=".m4a") as tf:
-        recorder = sound.Recorder(tf.name)
+    with AVAudioSession() as audio_session:
+        with tempfile.NamedTemporaryFile(suffix=".m4a") as tf:
+            recorder = sound.Recorder(tf.name)
 
-        # AVAudioSessionCategory: AVAudioSessionCategoryPlayback
-        # AVAudioSessionMode: AVAudioSessionModeDefault
-        # AVAudioSessionCategoryOptions: 1
-        print("\n=== 録音開始前のオーディオセッション状態 ===")
-        print(f"Category: {audio_session.category()}")
-        print(f"Mode: {audio_session.mode()}")
-        print(f"Options: {audio_session.categoryOptions()}")
+            # The `.record()` method configure the audio session as follows:
+            # [AVAudioSessionCategory]
+            #   from AVAudioSessionCategoryPlayback
+            #   to   AVAudioSessionCategoryPlayAndRecord
+            # [AVAudioSessionMode]
+            #   from AVAudioSessionModeDefault
+            #   to   AVAudioSessionModeDefault
+            # [AVAudioSessionCategoryOptions]
+            #   from 1
+            #   to   0
+            recorder.record()
 
-        recorder.record()
-        print("\n=== オーディオモードとオプションを変更中 ===")
-        if not audio_session.setCategory_mode_options_error_(
-            audio_session.category(),
-            "AVAudioSessionModeVoiceChat",
-            AVAudioSessionCategoryOptions.DefaultToSpeaker,
-            None,
-        ):
-            print("オーディオモードとオプションの復元に失敗")
+            if not audio_session.setCategory_withOptions_error_(
+                audio_session.category(),
+                AVAudioSessionCategoryOptions.DefaultToSpeaker,
+                None,
+            ):
+                raise RuntimeError(
+                    "Failed to set audio session category with options"
+                )
 
-        # AVAudioSessionCategory: AVAudioSessionCategoryPlayAndRecord
-        # AVAudioSessionMode: AVAudioSessionModeDefault
-        # AVAudioSessionCategoryOptions: 0
-        print("\n=== 録音中のオーディオセッション状態 ===")
-        print(f"Category: {audio_session.category()}")
-        print(f"Mode: {audio_session.mode()}")
-        print(f"Options: {audio_session.categoryOptions()}")
-
-        dialogs.alert("Recording...", "", "Finish", hide_cancel_button=True)
-        recorder.stop()
-
-        del recorder
-        print("\n=== recorder削除後のオーディオセッション状態 ===")
-        print(f"Category: {audio_session.category()}")
-        print(f"Mode: {audio_session.mode()}")
-        print(f"Options: {audio_session.categoryOptions()}")
+            dialogs.alert(
+                "Recording...", "", "Finish", hide_cancel_button=True
+            )
+            recorder.stop()
 
         result = speech.recognize(tf.name, language)
 
-    # AVAudioSessionCategory: AVAudioSessionCategoryPlayback
-    # AVAudioSessionMode: AVAudioSessionModeDefault
-    # AVAudioSessionCategoryOptions: 1
-    # print("\n=== オーディオセッションを復元中 ===")
-    # if not audio_session.setCategory_mode_options_error_(
-    #    original_category, original_mode, original_options, None
-    # ):
-    #    print("オーディオセッションの復元に失敗")
+        print("=== Details ===")
+        print(result)
+        print("=== Transcription ===")
+        print(result[0][0])
+        speech.say(result[0][0], language)
 
-    print("=== Details ===")
-    print(result)
-    print("=== Transcription ===")
-    print(result[0][0])
-    speech.say(result[0][0], language)
-
-    while speech.is_speaking():
-        time.sleep(0.1)
+        while speech.is_speaking():
+            time.sleep(0.1)
 
 
 if __name__ == "__main__":
