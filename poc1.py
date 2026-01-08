@@ -70,11 +70,11 @@ def main() -> None:
     # AVAudioSessionCategory: AVAudioSessionCategoryPlayback
     # AVAudioSessionMode: AVAudioSessionModeDefault
     # AVAudioSessionCategoryOptions: 1
-    print("\n=== オーディオセッションを復元中 ===")
-    if not audio_session.setCategory_mode_options_error_(
-        original_category, original_mode, original_options, None
-    ):
-        print("オーディオセッションの復元に失敗")
+    # print("\n=== オーディオセッションを復元中 ===")
+    # if not audio_session.setCategory_mode_options_error_(
+    #    original_category, original_mode, original_options, None
+    # ):
+    #    print("オーディオセッションの復元に失敗")
 
     print("=== Details ===")
     print(result)
