@@ -1,7 +1,6 @@
 import tempfile
 import time
 from contextlib import contextmanager
-from ctypes import c_void_p
 from enum import IntFlag
 
 import dialogs
@@ -35,11 +34,8 @@ def AVAudioSession():
     try:
         yield audio_session
     finally:
-        error = ObjCClass("NSError").alloc().init()
-        if not audio_session.setCategory_mode_options_error_(*original, error):
-            raise RuntimeError(
-                f"Failed to restore audio session: {c_void_p(id(error))}"
-            )
+        if not audio_session.setCategory_mode_options_error_(*original, None):
+            raise RuntimeError("Failed to restore audio session")
 
 
 def main() -> None:
@@ -74,8 +70,7 @@ def main() -> None:
                 "Recording...", "", "Finish", hide_cancel_button=True
             )
             recorder.stop()
-
-        result = speech.recognize(tf.name, language)
+            result = speech.recognize(tf.name, language)
 
         print("=== Details ===")
         print(result)
