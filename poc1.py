@@ -94,7 +94,7 @@ async def record_audio(fname: str):
         raise RuntimeError("Failed to configure audio session")
 
     await asyncio.to_thread(
-        console.alert, "Recording...", hide_cancel_button=True
+        console.alert, "Recording...", "", "Finish", hide_cancel_button=True
     )
     recorder.stop()
 
