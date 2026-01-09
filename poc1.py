@@ -1,9 +1,10 @@
-import tempfile
-import time
+import asyncio
 from contextlib import contextmanager
 from enum import IntFlag
+from pprint import pprint
+from tempfile import NamedTemporaryFile
 
-import dialogs
+import console
 import sound
 import speech
 from objc_util import ObjCClass
@@ -38,49 +39,82 @@ def AVAudioSession():
             raise RuntimeError("Failed to restore audio session")
 
 
-def main() -> None:
-
-    language = "ja_JP"
-    with AVAudioSession() as audio_session:
-        with tempfile.NamedTemporaryFile(suffix=".m4a") as tf:
-            recorder = sound.Recorder(tf.name)
-
-            # The `.record()` method changes AVAudioSession as follows:
-            # [AVAudioSessionCategory]
-            #   from AVAudioSessionCategoryPlayback
-            #   to   AVAudioSessionCategoryPlayAndRecord
-            # [AVAudioSessionMode]
-            #   from AVAudioSessionModeDefault
-            #   to   AVAudioSessionModeDefault
-            # [AVAudioSessionCategoryOptions]
-            #   from 1
-            #   to   0
-            recorder.record()
-
-            if not audio_session.setCategory_withOptions_error_(
-                audio_session.category(),
-                AVAudioSessionCategoryOptions.DefaultToSpeaker,
-                None,
-            ):
-                raise RuntimeError(
-                    "Failed to set audio session category with options"
-                )
-
-            dialogs.alert(
-                "Recording...", "", "Finish", hide_cancel_button=True
-            )
-            recorder.stop()
-            result = speech.recognize(tf.name, language)
-
-        print("=== Details ===")
-        print(result)
-        print("=== Transcription ===")
-        print(result[0][0])
-        speech.say(result[0][0], language)
+async def speak_aloud(queue: asyncio.Queue[str], language: str):
+    while True:
+        text = await queue.get()
+        speech.say(text, language)
 
         while speech.is_speaking():
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
+
+        queue.task_done()
+
+
+async def extract_phrases(
+    queue: asyncio.Queue[str], fname: str, language: str
+):
+    read = 0
+    while True:
+        await asyncio.sleep(1)
+
+        try:
+            result = speech.recognize(fname, language)
+        except RuntimeError:
+            continue
+
+        pprint(result)
+
+        await queue.put(result[0][0][read:])
+        read = len(result[0][0])
+
+
+async def record_audio(fname: str):
+    recorder = sound.Recorder(fname)
+
+    # The `.record()` method changes AVAudioSession as follows:
+    # [AVAudioSessionCategory]
+    #   from AVAudioSessionCategoryPlayback
+    #   to   AVAudioSessionCategoryPlayAndRecord
+    # [AVAudioSessionMode]
+    #   from AVAudioSessionModeDefault
+    #   to   AVAudioSessionModeDefault
+    # [AVAudioSessionCategoryOptions]
+    #   from 1
+    #   to   0
+    recorder.record()
+
+    AVAudioSession = ObjCClass("AVAudioSession")
+    audio_session = AVAudioSession.sharedInstance()
+
+    if not audio_session.setCategory_withOptions_error_(
+        audio_session.category(),
+        AVAudioSessionCategoryOptions.DefaultToSpeaker,
+        None,
+    ):
+        raise RuntimeError("Failed to configure audio session")
+
+    await asyncio.to_thread(
+        console.alert, "Recording...", hide_cancel_button=True
+    )
+    recorder.stop()
+
+
+async def main():
+    with AVAudioSession():
+        with NamedTemporaryFile(suffix=".m4a") as tf:
+            queue = asyncio.Queue[str]()
+            extractor = asyncio.create_task(
+                extract_phrases(queue, tf.name, "ja_JP")
+            )
+            speaker = asyncio.create_task(speak_aloud(queue, "ja_JP"))
+
+            await record_audio(tf.name)
+            await asyncio.sleep(1)
+
+            extractor.cancel()
+            await queue.join()
+            speaker.cancel()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
