@@ -9,12 +9,30 @@ source = { editable = "." }
 
 [package.optional-dependencies]
 dev = [
+    { name = "numpy" },
     { name = "pythonista-stubs" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pythonista-stubs", marker = "extra == 'dev'" }]
+requires-dist = [
+    { name = "numpy", marker = "extra == 'dev'", specifier = "==1.22.3" },
+    { name = "pythonista-stubs", marker = "extra == 'dev'" },
+]
 provides-extras = ["dev"]
+
+[[package]]
+name = "numpy"
+version = "1.22.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/4a/b008d1f8a7b9f5206ecf70a53f84e654707e7616a771d84c05151a4713e9/numpy-1.22.3.zip", hash = "sha256:dbc7601a3b7472d559dc7b933b18b4b66f9aa7452c120e87dfb33d02008c8a18", size = 11451867, upload-time = "2022-03-07T23:13:58.562Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/37/4a4898d9acd56087f9b4139b750f68df40355b7410dde4ce5ff8cbf54350/numpy-1.22.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:92bfa69cfbdf7dfc3040978ad09a48091143cffb778ec3b03fa170c494118d75", size = 17648723, upload-time = "2022-03-07T22:39:39.822Z" },
+    { url = "https://files.pythonhosted.org/packages/36/b1/b535a1d417c02d503d344115b5116a1b6156867e3d604af852e845ddd27c/numpy-1.22.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:8251ed96f38b47b4295b1ae51631de7ffa8260b5b087808ef09a39a9d66c97ab", size = 12761090, upload-time = "2022-03-07T22:40:00.103Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/b6/b8864042996dab931a9598e0aa9b55748aa6be80e743e4a2a6e5631f9bee/numpy-1.22.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:48a3aecd3b997bf452a2dedb11f4e79bc5bfd21a1d4cc760e703c31d57c84b3e", size = 13371746, upload-time = "2022-03-07T22:40:21.057Z" },
+    { url = "https://files.pythonhosted.org/packages/15/87/4d6bc4e2053a4b517b022746f8e2dae328155a4c723bcad4c7d536febf51/numpy-1.22.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a3bae1a2ed00e90b3ba5f7bd0a7c7999b55d609e0c54ceb2b076a25e345fa9f4", size = 16837087, upload-time = "2022-03-07T22:40:48.528Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/41/a35a2239895195a88ef3a42c716128061670e8b9042f368622ffafbf38ff/numpy-1.22.3-cp310-cp310-win32.whl", hash = "sha256:f950f8845b480cffe522913d35567e29dd381b0dc7e4ce6a4a9f9156417d2430", size = 12241949, upload-time = "2022-03-10T16:45:20.089Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/e5/527451a9fb79e1cffe18ee74d79e8b8da44272a70bf924ec94143d956831/numpy-1.22.3-cp310-cp310-win_amd64.whl", hash = "sha256:08d9b008d0156c70dc392bb3ab3abb6e7a711383c3247b410b39962263576cd4", size = 14746912, upload-time = "2022-03-07T22:41:10.934Z" },
+]
 
 [[package]]
 name = "pythonista-stubs"

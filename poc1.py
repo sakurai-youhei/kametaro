@@ -4,7 +4,8 @@ from enum import IntFlag
 from pprint import pprint
 from tempfile import NamedTemporaryFile
 
-import console
+import motion
+import numpy as np
 import sound
 import speech
 from objc_util import ObjCClass
@@ -92,10 +93,14 @@ async def record_audio(fname: str):
     ):
         raise RuntimeError("Failed to configure audio session")
 
-    await asyncio.to_thread(
-        console.alert, "Recording...", "", "Finish", hide_cancel_button=True
-    )
-    recorder.stop()
+    motion.start_updates()
+
+    try:
+        while np.abs(np.array(motion.get_user_acceleration())) < 1:
+            await asyncio.sleep(0.1)
+    finally:
+        motion.stop_updates()
+        recorder.stop()
 
 
 async def main():

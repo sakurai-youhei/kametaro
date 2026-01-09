@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [  ]
 
 optional-dependencies.dev = [
+  "numpy==1.22.3",
   "pythonista-stubs",
 ]
 
