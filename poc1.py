@@ -96,7 +96,7 @@ async def record_audio(fname: str):
     motion.start_updates()
 
     try:
-        while np.abs(np.array(motion.get_user_acceleration())) < 1:
+        while np.linalg.norm(np.array(motion.get_user_acceleration())) < 1:
             await asyncio.sleep(0.1)
     finally:
         motion.stop_updates()
