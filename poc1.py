@@ -9,6 +9,8 @@ import sound
 import speech
 from objc_util import ObjCClass
 
+AVAudioSession = ObjCClass("AVAudioSession")
+
 
 class AVAudioSessionCategoryOptions(IntFlag):
     MixWithOthers = 0x1
@@ -22,8 +24,7 @@ class AVAudioSessionCategoryOptions(IntFlag):
 
 
 @contextmanager
-def AVAudioSession():
-    AVAudioSession = ObjCClass("AVAudioSession")
+def audio_session():
     audio_session = AVAudioSession.sharedInstance()
 
     original = (
@@ -83,9 +84,7 @@ async def record_audio(fname: str):
     #   to   0
     recorder.record()
 
-    AVAudioSession = ObjCClass("AVAudioSession")
     audio_session = AVAudioSession.sharedInstance()
-
     if not audio_session.setCategory_withOptions_error_(
         audio_session.category(),
         AVAudioSessionCategoryOptions.DefaultToSpeaker,
@@ -100,20 +99,19 @@ async def record_audio(fname: str):
 
 
 async def main():
-    with AVAudioSession():
-        with NamedTemporaryFile(suffix=".m4a") as tf:
-            queue = asyncio.Queue[str]()
-            extractor = asyncio.create_task(
-                extract_phrases(queue, tf.name, "ja_JP")
-            )
-            speaker = asyncio.create_task(speak_aloud(queue, "ja_JP"))
+    with audio_session(), NamedTemporaryFile(suffix=".m4a") as tf:
+        queue = asyncio.Queue[str]()
+        extractor = asyncio.create_task(
+            extract_phrases(queue, tf.name, "ja_JP")
+        )
+        speaker = asyncio.create_task(speak_aloud(queue, "ja_JP"))
 
-            await record_audio(tf.name)
-            await asyncio.sleep(1)
+        await record_audio(tf.name)
+        await asyncio.sleep(1)
 
-            extractor.cancel()
-            await queue.join()
-            speaker.cancel()
+        extractor.cancel()
+        await queue.join()
+        speaker.cancel()
 
 
 if __name__ == "__main__":
