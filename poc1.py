@@ -102,6 +102,7 @@ async def record_audio(fname: str):
         while np.linalg.norm(np.array(motion.get_user_acceleration())) < 1:
             print("Recording... ", getsize(fname), "bytes")
             await asyncio.sleep(0.1)
+            print("Re-recording...")
             recorder.pause()
             recorder.record()
     finally:
