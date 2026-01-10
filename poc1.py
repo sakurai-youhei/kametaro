@@ -101,8 +101,8 @@ async def record_audio(fname: str):
     try:
         while np.linalg.norm(np.array(motion.get_user_acceleration())) < 1:
             print("Recording... ", getsize(fname), "bytes")
-            await asyncio.sleep(0.1)
-            print("Re-recording...")
+            # await asyncio.sleep(0.1)
+            # print("Re-recording...")
             recorder.pause()
             recorder.record()
     finally:
@@ -111,7 +111,8 @@ async def record_audio(fname: str):
 
 
 async def main():
-    with audio_session(), NamedTemporaryFile(suffix=".m4a") as tf:
+    # with audio_session(), NamedTemporaryFile(suffix=".m4a") as tf:
+    with audio_session(), NamedTemporaryFile(suffix=".wav") as tf:
         queue = asyncio.Queue[str]()
         extractor = asyncio.create_task(
             extract_phrases(queue, tf.name, "ja_JP")
