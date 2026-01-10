@@ -12,6 +12,7 @@ import speech
 from objc_util import ObjCClass
 
 AVAudioSession = ObjCClass("AVAudioSession")
+AVAudioRecorder = ObjCClass("AVAudioRecorder")
 
 
 class AVAudioSessionCategoryOptions(IntFlag):
@@ -101,6 +102,8 @@ async def record_audio(fname: str):
         while np.linalg.norm(np.array(motion.get_user_acceleration())) < 1:
             print("Recording... ", getsize(fname), "bytes")
             await asyncio.sleep(0.1)
+            recorder.pause()
+            recorder.record()
     finally:
         motion.stop_updates()
         recorder.stop()
