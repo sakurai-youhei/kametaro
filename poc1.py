@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import contextmanager
 from enum import IntFlag
+from os.path import getsize
 from pprint import pprint
 from tempfile import NamedTemporaryFile
 
@@ -97,6 +98,7 @@ async def record_audio(fname: str):
 
     try:
         while np.linalg.norm(np.array(motion.get_user_acceleration())) < 1:
+            print("Recording... ", getsize(fname), "bytes")
             await asyncio.sleep(0.1)
     finally:
         motion.stop_updates()
