@@ -63,6 +63,7 @@ async def extract_phrases(
         try:
             result = speech.recognize(fname, language)
         except RuntimeError:
+            print("Recognize nothing.")
             continue
 
         pprint(result)
