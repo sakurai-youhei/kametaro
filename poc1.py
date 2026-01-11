@@ -67,7 +67,11 @@ async def extract_phrases(
             pass
 
         print("Copying...")
-        shutil.copyfile(fname, tf.name)
+        try:
+            shutil.copyfile(fname, tf.name)
+        except Exception as e:
+            print("Copy failed:", e)
+            continue
         temp_wav = Path(tf.name)
         print("Fixing...")
         with temp_wav.open("wb") as fp:
