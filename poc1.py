@@ -87,8 +87,8 @@ async def extract_phrases(
             print("Recognizing...")
             try:
                 result = speech.recognize(tf.name, language)
-            except RuntimeError:
-                print("Recognize nothing.")
+            except RuntimeError as e:
+                print("Recognize nothing", e)
                 continue
             except Exception as e:
                 print(e)
