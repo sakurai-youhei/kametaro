@@ -86,7 +86,7 @@ async def extract_phrases(
 
             print("Recognizing...")
             try:
-                result = speech.recognize(temp_wav.name, language)
+                result = speech.recognize(tf.name, language)
             except RuntimeError:
                 print("Recognize nothing.")
                 continue
