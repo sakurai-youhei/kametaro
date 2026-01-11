@@ -90,6 +90,8 @@ async def extract_phrases(
             except RuntimeError:
                 print("Recognize nothing.")
                 continue
+            except Exception as e:
+                print(e)
 
         finally:
             temp_wav.unlink()
