@@ -79,7 +79,7 @@ async def extract_phrases(
                 continue
 
             print("Fixing...")
-            with temp_wav.open("wb") as fp:
+            with temp_wav.open("r+b") as fp:
                 fp.seek(4)
                 print("Size:", temp_wav.stat().st_size - 8)
                 fp.write(struct.pack("<I", temp_wav.stat().st_size - 8))
