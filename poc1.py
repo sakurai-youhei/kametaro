@@ -1,7 +1,9 @@
 import asyncio
+import shutil
+import struct
 from contextlib import contextmanager
 from enum import IntFlag
-from os.path import getsize
+from pathlib import Path
 from pprint import pprint
 from tempfile import NamedTemporaryFile
 
@@ -61,11 +63,22 @@ async def extract_phrases(
     while True:
         await asyncio.sleep(1)
 
+        with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
+            pass
+
+        shutil.copyfile(fname, tf.name)
+        temp_wav = Path(tf.name)
+        with temp_wav.open("wb") as fp:
+            fp.seek(4)
+            fp.write(struct.pack("<I", temp_wav.stat().st_size - 8))
+
         try:
-            result = speech.recognize(fname, language)
+            result = speech.recognize(tf.name, language)
         except RuntimeError:
             print("Recognize nothing.")
             continue
+        finally:
+            temp_wav.unlink()
 
         pprint(result)
 
@@ -100,18 +113,13 @@ async def record_audio(fname: str):
 
     try:
         while np.linalg.norm(np.array(motion.get_user_acceleration())) < 1:
-            print("Recording... ", getsize(fname), "bytes")
             await asyncio.sleep(0.1)
-            # print("Re-recording...")
-            # recorder.pause()
-            # recorder.record()
     finally:
         motion.stop_updates()
         recorder.stop()
 
 
 async def main():
-    # with audio_session(), NamedTemporaryFile(suffix=".m4a") as tf:
     with audio_session(), NamedTemporaryFile(suffix=".wav") as tf:
         queue = asyncio.Queue[str]()
         extractor = asyncio.create_task(
