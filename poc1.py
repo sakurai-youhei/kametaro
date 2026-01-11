@@ -73,7 +73,7 @@ async def extract_phrases(
             shutil.copyfile(fname, temp_wav)
 
             size = temp_wav.stat().st_size
-            if size < 4:
+            if size < 8:
                 print("File too small:", size)
                 temp_wav.unlink()
                 continue
