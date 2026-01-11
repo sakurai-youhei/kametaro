@@ -66,12 +66,14 @@ async def extract_phrases(
         with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
             pass
 
+        print("Copying...")
         shutil.copyfile(fname, tf.name)
         temp_wav = Path(tf.name)
         with temp_wav.open("wb") as fp:
             fp.seek(4)
             fp.write(struct.pack("<I", temp_wav.stat().st_size - 8))
 
+        print("Recognizing...")
         try:
             result = speech.recognize(tf.name, language)
         except RuntimeError:
