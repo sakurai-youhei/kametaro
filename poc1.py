@@ -69,8 +69,10 @@ async def extract_phrases(
         print("Copying...")
         shutil.copyfile(fname, tf.name)
         temp_wav = Path(tf.name)
+        print("Fixing...")
         with temp_wav.open("wb") as fp:
             fp.seek(4)
+            print("Size:", temp_wav.stat().st_size - 8)
             fp.write(struct.pack("<I", temp_wav.stat().st_size - 8))
 
         print("Recognizing...")
