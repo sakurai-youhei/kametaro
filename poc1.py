@@ -1,7 +1,9 @@
 import asyncio
 import wave
 from chunk import Chunk
+from collections.abc import Sequence
 from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass, field
 from enum import IntFlag
 from functools import partial
 from os import unlink
@@ -124,11 +126,20 @@ class ResilientWaveFile(wave.Wave_read):
             return super().readframes(nframes)
 
 
+@dataclass(frozen=True)
+class Segment:
+    timestamp: float
+    confidence: float
+    substring: str
+    duration: float
+    alternative_substrings: list[str] = field(default_factory=list)
+
+
 class Transcriber:
     def __init__(self, file_path: str):
         self.file_path = file_path
 
-    def transcribe(self, language: str):
+    def transcribe(self, language: str) -> tuple[str, Sequence[Segment]]:
         with ResilientWaveFile(self.file_path) as wav_in:
 
             if not wav_in.is_fragmented():
@@ -144,9 +155,12 @@ class Transcriber:
                     wav_out.setframerate(wav_in.getframerate())
 
                     wav_out.writeframes(wav_in.readframes(wav_in.getnframes()))
-                return speech.recognize(tf.name, language)
+                for string, segments in speech.recognize(tf.name, language):
+                    return string, [Segment(**segment) for segment in segments]
             finally:
                 unlink(tf.name)
+
+        return "", []
 
 
 async def speak_aloud(queue: asyncio.Queue[str], language: str):
@@ -170,78 +184,18 @@ async def extract_phrases(
         await asyncio.sleep(1)
 
         try:
-            result = transcriber.transcribe(language)
-        except (EOFError, wave.Error, RuntimeError) as e:
-            print(e)
+            string, segments = transcriber.transcribe(language)
+        except (EOFError, wave.Error, RuntimeError):
             continue
         except Exception as e:
             print("Unexpected error:", e)
             continue
 
-        pprint(result)
+        pprint(segments)
 
-        await queue.put(result[0][0][read:])
-        read = len(result[0][0])
+        await queue.put(string[read:])
+        read = len(string)
         print(f"Read up to {read} characters")
-
-        """
-        try:
-            n_channels, sample_width, *_ = wave.open(fname).getparams()
-        except (EOFError, wave.Error):
-            continue
-
-        frame_width = n_channels * sample_width
-
-        with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
-            pass
-
-        temp_wav = Path(tf.name)
-
-        try:
-            shutil.copyfile(fname, temp_wav)
-            file_size = temp_wav.stat().st_size
-
-            print(f"Copied {file_size} bytes")
-
-            with temp_wav.open("r+b") as fp:
-                riff_chunk_size = file_size - 8
-                print(f"Correcting RIFF chunk size to {riff_chunk_size} bytes")
-
-                fp.seek(4)
-                fp.write(struct.pack("<I", riff_chunk_size))
-                assert fp.read(4) == b"WAVE"
-
-                chunk = Chunk(fp, bigendian=False)
-                while chunk.getname() != b"data":
-                    print(f"Skipping chunk {chunk.getname().decode()}")
-                    chunk.skip()
-                    chunk = Chunk(fp, bigendian=False)
-
-                data_chunk_size = file_size - fp.tell()
-                data_chunk_size //= frame_width
-                data_chunk_size *= frame_width
-                print(f"Correcting data chunk size to {data_chunk_size} bytes")
-
-                fp.seek(-4, SEEK_CUR)
-                fp.write(struct.pack("<I", data_chunk_size))
-
-            try:
-                print("Recognizing...")
-                result = speech.recognize(str(temp_wav), language)
-            except RuntimeError as e:
-                print("Recognized nothing", e)
-                continue
-
-        except Exception as e:
-            print(e)
-        finally:
-            temp_wav.unlink(missing_ok=True)
-
-        pprint(result)
-
-        await queue.put(result[0][0][read:])
-        read = len(result[0][0])
-        """
 
 
 async def record_audio(fname: str):
