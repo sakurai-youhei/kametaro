@@ -51,6 +51,7 @@ def audio_session():
 async def speak_aloud(queue: asyncio.Queue[str], language: str):
     while True:
         text = await queue.get()
+        print(f"Saying: {text}")
         speech.say(text, language)
 
         while speech.is_speaking():
