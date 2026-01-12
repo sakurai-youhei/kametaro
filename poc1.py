@@ -33,12 +33,12 @@ class AVAudioSessionCategoryOptions(IntFlag):
 
 class Recorder:
     def __init__(self, file_path: str):
-        self.__recorder = sound.Recorder(file_path)
-        self.__restore = lambda: True
+        self._recorder = sound.Recorder(file_path)
+        self._restore_audio_session = lambda: True  # Do nothing by default
 
     def record(self):
         audio_session = AVAudioSession.sharedInstance()
-        self.__restore = partial(
+        self._restore_audio_session = partial(
             audio_session.setCategory_mode_options_error_,
             audio_session.category(),
             audio_session.mode(),
@@ -56,7 +56,7 @@ class Recorder:
         # [AVAudioSessionCategoryOptions]
         #   from 1
         #   to   0
-        r = self.__recorder.record()
+        r = self._recorder.record()
 
         if not audio_session.setCategory_withOptions_error_(
             audio_session.category(),
@@ -69,15 +69,15 @@ class Recorder:
         return r
 
     def stop(self):
-        r = self.__recorder.stop()
+        r = self._recorder.stop()
 
-        if not self.__restore():
+        if not self._restore_audio_session():
             raise RuntimeError("Failed to restore audio session")
 
         return r
 
 
-class InterimWaveFile(wave.Wave_read):
+class ResilientWaveFile(wave.Wave_read):
     @property
     def __riff_chunk(self) -> Chunk:
         return cast(Chunk, self._file)  # type: ignore[attr-defined]
@@ -86,40 +86,39 @@ class InterimWaveFile(wave.Wave_read):
     def __data_chunk(self) -> Chunk:
         return cast(Chunk, self._data_chunk)  # type: ignore[attr-defined]
 
-    @property
-    def __file_size(self) -> int:
+    def getfilesize(self) -> int:
         return getsize(self.__riff_chunk.file.name)
 
     @contextmanager
-    def __override_riff_chunk_size(self):
-        size = self.__file_size - self.__riff_chunk.offset
+    def _override_riff_chunk_size(self):
+        size = self.getfilesize() - self.__riff_chunk.offset
         with patch.object(self.__riff_chunk, "chunksize", new=size):
             yield
 
     @contextmanager
-    def __override_data_chunk_size(self):
-        size = self.__file_size - self.__data_chunk.offset
+    def _override_data_chunk_size(self):
+        size = self.getfilesize() - self.__data_chunk.offset
         with patch.object(self.__data_chunk, "chunksize", new=size):
             yield
 
-    def is_finalized(self) -> bool:
+    def is_fragmented(self) -> bool:
         riff_chunk = self.__riff_chunk
-        return riff_chunk.offset + riff_chunk.getsize() == self.__file_size
+        return riff_chunk.offset + riff_chunk.getsize() != self.getfilesize()
 
     def initfp(self, file):
         super().initfp(file)
 
-        if not self.is_finalized():
+        if self.is_fragmented():
             frame_size = self.getnchannels() * self.getsampwidth()
-            with self.__override_data_chunk_size():
+            with self._override_data_chunk_size():
                 self._nframes = self.__data_chunk.getsize() // frame_size
 
     def readframes(self, nframes: int) -> bytes:
         stack = ExitStack()
 
-        if not self.is_finalized():
-            stack.enter_context(self.__override_riff_chunk_size())
-            stack.enter_context(self.__override_data_chunk_size())
+        if self.is_fragmented():
+            stack.enter_context(self._override_riff_chunk_size())
+            stack.enter_context(self._override_data_chunk_size())
 
         with stack:
             return super().readframes(nframes)
@@ -130,21 +129,21 @@ class Transcriber:
         self.file_path = file_path
 
     def transcribe(self, language: str):
-        with InterimWaveFile(self.file_path) as wavin:
+        with ResilientWaveFile(self.file_path) as wav_in:
 
-            if wavin.is_finalized():
+            if not wav_in.is_fragmented():
                 return speech.recognize(self.file_path, language)
 
             with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
                 pass
 
             try:
-                with wave.open(tf.name, "wb") as wavout:
-                    wavout.setnchannels(wavin.getnchannels())
-                    wavout.setsampwidth(wavin.getsampwidth())
-                    wavout.setframerate(wavin.getframerate())
+                with wave.open(tf.name, "wb") as wav_out:
+                    wav_out.setnchannels(wav_in.getnchannels())
+                    wav_out.setsampwidth(wav_in.getsampwidth())
+                    wav_out.setframerate(wav_in.getframerate())
 
-                    wavout.writeframes(wavin.readframes(wavin.getnframes()))
+                    wav_out.writeframes(wav_in.readframes(wav_in.getnframes()))
                 return speech.recognize(tf.name, language)
             finally:
                 unlink(tf.name)
