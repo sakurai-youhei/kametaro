@@ -1,8 +1,11 @@
 import asyncio
 import shutil
 import struct
+import wave
+from chunk import Chunk
 from contextlib import contextmanager
 from enum import IntFlag
+from os import SEEK_CUR
 from pathlib import Path
 from pprint import pprint
 from tempfile import NamedTemporaryFile
@@ -63,38 +66,56 @@ async def extract_phrases(
     while True:
         await asyncio.sleep(1)
 
+        try:
+            n_channels, sample_width, *_ = wave.open(fname).getparams()
+        except (EOFError, wave.Error):
+            continue
+
+        frame_width = n_channels * sample_width
+
         with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
             pass
 
         temp_wav = Path(tf.name)
 
         try:
-            print("Copying...")
             shutil.copyfile(fname, temp_wav)
+            file_size = temp_wav.stat().st_size
 
-            size = temp_wav.stat().st_size
-            if size < 8:
-                print("File too small:", size)
-                temp_wav.unlink()
-                continue
+            print(f"Copied {file_size} bytes")
 
-            print("Fixing...")
             with temp_wav.open("r+b") as fp:
+                riff_chunk_size = file_size - 8
+                print(f"Correcting RIFF chunk size to {riff_chunk_size} bytes")
+
                 fp.seek(4)
-                print("Size:", temp_wav.stat().st_size - 8)
-                fp.write(struct.pack("<I", temp_wav.stat().st_size - 8))
+                fp.write(struct.pack("<I", riff_chunk_size))
+                assert fp.read(4) == b"WAVE"
 
-            print("Recognizing...")
+                chunk = Chunk(fp, bigendian=False)
+                while chunk.getname() != b"data":
+                    print(f"Skipping chunk {chunk.getname().decode()}")
+                    chunk.skip()
+
+                data_chunk_size = file_size - fp.tell()
+                data_chunk_size //= frame_width
+                data_chunk_size *= frame_width
+                print(f"Correcting data chunk size to {data_chunk_size} bytes")
+
+                fp.seek(-4, SEEK_CUR)
+                fp.write(struct.pack("<I", data_chunk_size))
+
             try:
-                result = speech.recognize(tf.name, language)
+                print("Recognizing...")
+                result = speech.recognize(temp_wav.absolute(), language)
             except RuntimeError as e:
-                print("Recognize nothing", e)
+                print("Recognized nothing", e)
                 continue
-            except Exception as e:
-                print(e)
 
+        except Exception as e:
+            print(e)
         finally:
-            temp_wav.unlink()
+            temp_wav.unlink(missing_ok=True)
 
         pprint(result)
 
