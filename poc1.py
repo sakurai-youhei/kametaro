@@ -187,7 +187,7 @@ async def speak_aloud(queue: asyncio.Queue[str], language: str):
 async def extract_phrases(
     queue: asyncio.Queue[str], fname: str, language: str
 ):
-    read = 0
+    said: list[Segment] = []
     transcriber = Transcriber(fname)
     while True:
         await asyncio.sleep(1)
@@ -200,11 +200,17 @@ async def extract_phrases(
             print("Unexpected error:", e)
             continue
 
+        segments = segments[len(said) :]
         pprint(segments)
 
-        await queue.put(string[read:])
-        read = len(string)
-        print(f"Read up to {read} characters")
+        while segments and segments[-1].confidence < 0.5:
+            segments.pop()
+
+        say = "".join(segment.substring for segment in segments)
+
+        await queue.put(say)
+        said.extend(segments)
+        print(f"Said up to {len(said)} segments")
 
 
 async def record_audio(fname: str):
