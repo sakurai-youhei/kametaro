@@ -1,7 +1,7 @@
 import asyncio
 import wave
 from chunk import Chunk
-from collections.abc import Sequence
+from collections.abc import MutableSequence
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, field
 from enum import IntFlag
@@ -139,11 +139,22 @@ class Transcriber:
     def __init__(self, file_path: str):
         self.file_path = file_path
 
-    def transcribe(self, language: str) -> tuple[str, Sequence[Segment]]:
+    @staticmethod
+    def _recognize(
+        file_path, language: str
+    ) -> tuple[str, MutableSequence[Segment]]:
+
+        string, segments = speech.recognize(file_path, language)[0]
+        return string, [Segment(**segment) for segment in segments]
+
+    def transcribe(
+        self, language: str
+    ) -> tuple[str, MutableSequence[Segment]]:
+
         with ResilientWaveFile(self.file_path) as wav_in:
 
             if not wav_in.is_fragmented():
-                return speech.recognize(self.file_path, language)
+                return self._recognize(self.file_path, language)
 
             with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
                 pass
@@ -155,12 +166,10 @@ class Transcriber:
                     wav_out.setframerate(wav_in.getframerate())
 
                     wav_out.writeframes(wav_in.readframes(wav_in.getnframes()))
-                for string, segments in speech.recognize(tf.name, language):
-                    return string, [Segment(**segment) for segment in segments]
+
+                return self._recognize(tf.name, language)
             finally:
                 unlink(tf.name)
-
-        return "", []
 
 
 async def speak_aloud(queue: asyncio.Queue[str], language: str):
