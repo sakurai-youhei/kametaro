@@ -3,6 +3,7 @@ import wave
 from chunk import Chunk
 from contextlib import ExitStack, contextmanager
 from enum import IntFlag
+from functools import partial
 from os import unlink
 from os.path import getsize
 from pprint import pprint
@@ -30,13 +31,19 @@ class AVAudioSessionCategoryOptions(IntFlag):
     OverrideMutedMicrophoneInterruption = 0x80
 
 
-class Recorder(sound.Recorder):
+class Recorder:
+    def __init__(self, file_path: str):
+        self.__recorder = sound.Recorder(file_path)
+        self.__restore = lambda: True
+
     def record(self):
         audio_session = AVAudioSession.sharedInstance()
-        self.__original = (
+        self.__restore = partial(
+            audio_session.setCategory_mode_options_error_,
             audio_session.category(),
             audio_session.mode(),
             audio_session.categoryOptions(),
+            None,
         )
 
         # The `.record()` method changes AVAudioSession as follows:
@@ -49,7 +56,7 @@ class Recorder(sound.Recorder):
         # [AVAudioSessionCategoryOptions]
         #   from 1
         #   to   0
-        r = super().record()
+        r = self.__recorder.record()
 
         if not audio_session.setCategory_withOptions_error_(
             audio_session.category(),
@@ -62,12 +69,9 @@ class Recorder(sound.Recorder):
         return r
 
     def stop(self):
-        r = super().stop()
+        r = self.__recorder.stop()
 
-        audio_session = AVAudioSession.sharedInstance()
-        if not audio_session.setCategory_mode_options_error_(
-            *self.__original, None
-        ):
+        if not self.__restore():
             raise RuntimeError("Failed to restore audio session")
 
         return r
