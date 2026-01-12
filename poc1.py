@@ -141,7 +141,8 @@ async def record_audio(fname: str):
     audio_session = AVAudioSession.sharedInstance()
     if not audio_session.setCategory_withOptions_error_(
         audio_session.category(),
-        AVAudioSessionCategoryOptions.DefaultToSpeaker,
+        AVAudioSessionCategoryOptions.DefaultToSpeaker
+        | AVAudioSessionCategoryOptions.AllowBluetooth,
         None,
     ):
         raise RuntimeError("Failed to configure audio session")
