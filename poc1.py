@@ -148,12 +148,12 @@ class Transcriber:
         return string, [Segment(**segment) for segment in segments]
 
     def transcribe(
-        self, language: str
+        self, language: str, offset: float = 0.0
     ) -> tuple[str, MutableSequence[Segment]]:
 
         with ResilientWaveFile(self.file_path) as wav_in:
 
-            if not wav_in.is_fragmented():
+            if offset == 0 and not wav_in.is_fragmented():
                 return self._recognize(self.file_path, language)
 
             with NamedTemporaryFile(suffix=".wav", delete=False) as tf:
@@ -193,7 +193,12 @@ async def extract_phrases(
         await asyncio.sleep(1)
 
         try:
-            string, segments = transcriber.transcribe(language)
+            offset = said[-1].timestamp + said[-1].duration
+        except IndexError:
+            offset = 0.0
+
+        try:
+            string, segments = transcriber.transcribe(language, offset)
         except (EOFError, wave.Error, RuntimeError):
             continue
         except Exception as e:
