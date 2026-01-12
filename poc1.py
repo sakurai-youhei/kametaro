@@ -96,6 +96,7 @@ async def extract_phrases(
                 while chunk.getname() != b"data":
                     print(f"Skipping chunk {chunk.getname().decode()}")
                     chunk.skip()
+                    chunk = Chunk(fp, bigendian=False)
 
                 data_chunk_size = file_size - fp.tell()
                 data_chunk_size //= frame_width
